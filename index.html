@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Varisamkhya Management System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SheetJS for Excel/CSV Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- jsPDF for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .dark .glass-panel {
+            background: rgba(15, 23, 42, 0.88);
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+    </style>
+</head>
+<body class="h-full bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-200 flex flex-col max-w-md mx-auto shadow-2xl relative overflow-hidden">
+
+    <!-- Top Header -->
+    <header class="glass-panel border-b border-slate-200/80 dark:border-slate-800 px-4 py-3 flex items-center justify-between shadow-sm z-30 shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="bg-indigo-600 text-white p-2.5 rounded-2xl shadow-md shadow-indigo-500/30 flex items-center justify-center">
+                <i class="fa-solid fa-graduation-cap text-base"></i>
+            </div>
+            <div>
+                <h1 class="text-sm font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent">Varisamkhya</h1>
+                <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Collection Registry App</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-2">
+            <!-- Cloud Sync Badge -->
+            <div id="sync-status" onclick="openAuthModal()" class="cursor-pointer flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-[11px] font-medium">
+                <i class="fa-brands fa-google text-indigo-500 text-xs"></i>
+                <span id="sync-text" class="hidden sm:inline">Sync</span>
+            </div>
+            <!-- Theme Toggle -->
+            <button onclick="toggleDarkMode()" class="p-2 rounded-xl bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition">
+                <i class="fa-solid fa-moon dark:hidden text-xs"></i>
+                <i class="fa-solid fa-sun hidden dark:block text-xs"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- App Body Container -->
+    <main class="flex-1 overflow-hidden relative flex flex-col">
+        
+        <!-- TAB 1: DASHBOARD & STATS -->
+        <div id="tab-dashboard" class="tab-content active flex-1 overflow-y-auto p-4 space-y-4 pb-20">
+            <!-- Summary Banner -->
+            <div class="bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-5 rounded-3xl shadow-xl shadow-indigo-600/20 space-y-3 relative overflow-hidden">
+                <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-indigo-200">Total Collection Pool</span>
+                    <i class="fa-solid fa-wallet text-indigo-200 text-lg"></i>
+                </div>
+                <div>
+                    <h2 id="stat-total-cash" class="text-3xl font-black tracking-tight">₹0</h2>
+                    <p id="stat-total-entries" class="text-xs text-indigo-100 mt-1 font-medium">0 Total Entries Recorded</p>
+                </div>
+                <!-- Payment Status Breakdown Row -->
+                <div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/15">
+                    <div>
+                        <p class="text-[10px] text-indigo-200 uppercase font-semibold">Cash</p>
+                        <p id="stat-cash-amt" class="text-xs font-bold">₹0</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-indigo-200 uppercase font-semibold">Online</p>
+                        <p id="stat-online-amt" class="text-xs font-bold">₹0</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-indigo-200 uppercase font-semibold">Not Paid</p>
+                        <p id="stat-notpaid-count" class="text-xs font-bold">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions Grid -->
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="switchTab('add')" class="glass-panel p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col items-center text-center space-y-2 hover:border-indigo-500 transition active:scale-95">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-base shadow-sm">
+                        <i class="fa-solid fa-plus"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-slate-100">Add Entry</h4>
+                        <p class="text-[10px] text-slate-500">Record cash collection</p>
+                    </div>
+                </button>
+                <button onclick="switchTab('students')" class="glass-panel p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col items-center text-center space-y-2 hover:border-violet-500 transition active:scale-95">
+                    <div class="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-950/60 text-violet-600 dark:text-violet-400 flex items-center justify-center text-base shadow-sm">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-slate-100">Student Directory</h4>
+                        <p class="text-[10px] text-slate-500">Browse & add students</p>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Canvas Chart Card -->
+            <div class="glass-panel p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Collection by Class</h3>
+                    <i class="fa-solid fa-chart-simple text-indigo-600"></i>
+                </div>
+                <div class="w-full h-48 relative">
+                    <canvas id="dashboard-canvas" class="w-full h-full"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Activity List -->
+            <div class="glass-panel p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Recent Collections</h3>
+                    <button onclick="switchTab('registry')" class="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">View All</button>
+                </div>
+                <div id="recent-activity-list" class="space-y-2">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: ADD / EDIT ENTRY FORM -->
+        <div id="tab-add" class="tab-content hidden flex-1 overflow-y-auto p-4 space-y-4 pb-20">
+            <div class="glass-panel p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+                    <h3 id="form-title" class="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center">
+                        <i class="fa-solid fa-circle-plus text-indigo-600 mr-2"></i> New Collection Entry
+                    </h3>
+                    <button onclick="resetEntryForm(); switchTab('dashboard')" class="text-slate-400 hover:text-slate-600 text-xs font-semibold">Cancel</button>
+                </div>
+
+                <form id="entry-form" onsubmit="handleFormSubmit(event)" class="space-y-3.5">
+                    <input type="hidden" id="edit-record-id" value="">
+                    <!-- Class Select -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Class / Division</label>
+                        <select id="form-class" required onchange="onClassChange()" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                            <option value="">Select Class...</option>
+                        </select>
+                    </div>
+
+                    <!-- Student Select Picker -->
+                    <div id="class-students-picker" class="hidden space-y-1.5 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 p-2.5 rounded-xl">
+                        <label class="block text-[11px] font-bold text-indigo-700 dark:text-indigo-300 flex items-center justify-between">
+                            <span><i class="fa-solid fa-users mr-1"></i> Student Directory Picker</span>
+                            <span id="class-student-count" class="text-[10px] font-normal text-slate-500">0 students</span>
+                        </label>
+                        <select id="form-class-student-select" onchange="onClassStudentSelect(this)" class="w-full bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                            <option value="">-- Choose student from list --</option>
+                        </select>
+                    </div>
+
+                    <!-- Admission Number with Search Suggestions -->
+                    <div class="relative">
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Admission Number</label>
+                        <input type="text" id="form-adm" required placeholder="Type admission no..." oninput="handleAdmInput()" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" autocomplete="off">
+                        <div id="adm-suggestions" class="absolute left-0 right-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-40 overflow-y-auto z-30 hidden"></div>
+                    </div>
+
+                    <!-- Student Name with Search Suggestions -->
+                    <div class="relative">
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Student Name</label>
+                        <input type="text" id="form-name" required placeholder="Student full name..." oninput="handleNameInput()" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" autocomplete="off">
+                        <div id="name-suggestions" class="absolute left-0 right-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-40 overflow-y-auto z-30 hidden"></div>
+                    </div>
+
+                    <!-- Payment Method Dropdown -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Payment Method</label>
+                        <select id="form-payment-method" onchange="onPaymentMethodChange()" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                            <option value="Cash">Cash</option>
+                            <option value="Online">Online</option>
+                            <option value="Not Paid">Not Paid</option>
+                        </select>
+                    </div>
+
+                    <!-- Cash Amount -->
+                    <div id="amount-container">
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Amount (₹)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs font-bold">₹</span>
+                            <input type="number" id="form-cash" min="0" step="1" placeholder="0.00" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-7 pr-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                        </div>
+                    </div>
+
+                    <!-- Date -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Date</label>
+                        <input type="date" id="form-date" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="pt-3">
+                        <button type="submit" id="form-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Save Entry</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- TAB 3: REGISTRY & SEARCH -->
+        <div id="tab-registry" class="tab-content hidden flex-1 overflow-y-auto p-4 space-y-4 pb-20">
+            <div class="glass-panel p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Registry Records</h3>
+                    <span id="table-record-count" class="text-[11px] text-slate-500 font-medium">0 records</span>
+                </div>
+
+                <!-- Filters -->
+                <div class="grid grid-cols-2 gap-2">
+                    <select id="filter-class" onchange="filterData()" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none">
+                        <option value="">All Classes</option>
+                    </select>
+                    <select id="filter-payment" onchange="filterData()" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none">
+                        <option value="">All Methods</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Online">Online</option>
+                        <option value="Not Paid">Not Paid</option>
+                    </select>
+                </div>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                    </span>
+                    <input type="text" id="search-input" oninput="filterData()" placeholder="Search student name or admission no..." class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs font-medium focus:outline-none">
+                </div>
+
+                <!-- Export Bar -->
+                <div class="flex items-center justify-between pt-1 gap-2">
+                    <button onclick="exportGoogleSheet()" class="flex-1 bg-sky-600 hover:bg-sky-700 text-white py-2 rounded-xl text-[11px] font-semibold transition flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span>Excel</span>
+                    </button>
+                    <button onclick="exportCSV()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl text-[11px] font-semibold transition flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-download"></i>
+                        <span>CSV</span>
+                    </button>
+                    <button onclick="exportPDF()" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-2 rounded-xl text-[11px] font-semibold transition flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span>PDF</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Registry Cards List -->
+            <div id="registry-cards-container" class="space-y-2.5">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+
+        <!-- TAB 4: STUDENT DIRECTORY -->
+        <div id="tab-students" class="tab-content hidden flex-1 overflow-y-auto p-4 space-y-4 pb-20">
+            <div class="glass-panel p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Master Class Directory</h3>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="openAddStudentModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-xl text-[11px] font-semibold flex items-center space-x-1">
+                            <i class="fa-solid fa-user-plus text-[10px]"></i>
+                            <span>Add Student</span>
+                        </button>
+                        <select id="directory-class-select" onchange="renderDirectory()" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-medium focus:outline-none">
+                            <!-- Populated via JS -->
+                        </select>
+                    </div>
+                </div>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                    </span>
+                    <input type="text" id="directory-search-input" oninput="renderDirectory()" placeholder="Search student..." class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs font-medium focus:outline-none">
+                </div>
+            </div>
+
+            <div id="directory-students-list" class="space-y-2">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation Bar (Mobile App Style) -->
+    <nav class="glass-panel border-t border-slate-200/80 dark:border-slate-800 px-3 py-2 flex items-center justify-around z-40 shrink-0">
+        <button onclick="switchTab('dashboard')" id="nav-btn-dashboard" class="flex flex-col items-center space-y-1 text-indigo-600 dark:text-indigo-400 transition">
+            <i class="fa-solid fa-chart-pie text-base"></i>
+            <span class="text-[10px] font-semibold">Dashboard</span>
+        </button>
+        <button onclick="switchTab('add')" id="nav-btn-add" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition">
+            <i class="fa-solid fa-circle-plus text-base"></i>
+            <span class="text-[10px] font-semibold">Add Entry</span>
+        </button>
+        <button onclick="switchTab('registry')" id="nav-btn-registry" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition">
+            <i class="fa-solid fa-list-check text-base"></i>
+            <span class="text-[10px] font-semibold">Registry</span>
+        </button>
+        <button onclick="switchTab('students')" id="nav-btn-students" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition">
+            <i class="fa-solid fa-users text-base"></i>
+            <span class="text-[10px] font-semibold">Students</span>
+        </button>
+    </nav>
+
+    <!-- Add Student Modal -->
+    <div id="add-student-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-sm p-5 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <div class="bg-indigo-600 text-white p-2.5 rounded-2xl shadow-md">
+                        <i class="fa-solid fa-user-plus text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">Add New Student</h3>
+                        <p class="text-[10px] text-slate-500">Register student to class directory</p>
+                    </div>
+                </div>
+                <button onclick="closeAddStudentModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+            <form id="add-student-form" onsubmit="handleAddNewStudent(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Target Class</label>
+                    <select id="modal-student-class" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none">
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Admission Number</label>
+                    <input type="text" id="modal-student-adm" required placeholder="Enter admission no..." class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Student Full Name</label>
+                    <input type="text" id="modal-student-name" required placeholder="Enter student name..." class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none">
+                </div>
+                <div class="flex items-center justify-end space-x-2 pt-2">
+                    <button type="button" onclick="closeAddStudentModal()" class="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600">Cancel</button>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md">Add Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed bottom-20 left-4 right-4 z-50 flex flex-col items-center space-y-2 pointer-events-none"></div>
+
+    <!-- Google Auth Modal -->
+    <div id="auth-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-sm p-5 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <div class="bg-indigo-600 text-white p-2.5 rounded-2xl shadow-md">
+                        <i class="fa-brands fa-google text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">Google Cloud Sync</h3>
+                        <p class="text-[10px] text-slate-500">Secure backup across devices</p>
+                    </div>
+                </div>
+                <button onclick="closeAuthModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">Google Email Account</label>
+                <input type="email" id="google-email-input" placeholder="your.email@gmail.com" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="flex items-center justify-end space-x-2 pt-2">
+                <button onclick="closeAuthModal()" class="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600">Cancel</button>
+                <button onclick="handleGoogleSignIn()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md">Connect</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'varisamkhya-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+        let db = null;
+        let auth = null;
+        let userId = null;
+        let isCloudSyncActive = false;
+
+        // Comprehensive Master Student Database for all classes (1A to +2)
+        const defaultStudentDatabase = {
+            "1 A": [
+                {admissionNo: "3881", name: "MUHAMMED ISHAN.K"}, {admissionNo: "3939", name: "MUHAMMED FAIZAN P"},
+                {admissionNo: "3940", name: "MUHAMMAD NIHAL K"}, {admissionNo: "3941", name: "MUHAMMED MUZAMMIL K"},
+                {admissionNo: "3942", name: "MUHAMMED AADIL C"}, {admissionNo: "3943", name: "MUHAMMED FAIZAN M"},
+                {admissionNo: "3944", name: "MOHAMMED RAZEEN C"}, {admissionNo: "3945", name: "MUHAMMED RAZEEN A T"},
+                {admissionNo: "3946", name: "MUHAMMED ADIL K"}, {admissionNo: "3947", name: "MUHAMMED AYANUL MAHIR"},
+                {admissionNo: "3948", name: "MUHAMMED ADHIL RK"}, {admissionNo: "3949", name: "MUHAMMED A"},
+                {admissionNo: "3950", name: "MUHAMMED IZYAN V P"}, {admissionNo: "3951", name: "MUHAMMED NAHYAN"},
+                {admissionNo: "3952", name: "MUHAMMED EMIN ZAD P"}, {admissionNo: "3953", name: "EZAN AHAMMED K"},
+                {admissionNo: "3954", name: "MUHAMMED HANAN K"}, {admissionNo: "3955", name: "MUHAMMED RAAMIZ C"},
+                {admissionNo: "3903", name: "FATHIMA SHAMEELA N"}, {admissionNo: "3904", name: "AYISHA DUA KM"},
+                {admissionNo: "3909", name: "FATHIMA FARHANA KC"}, {admissionNo: "3956", name: "AMANA SHERIN"},
+                {admissionNo: "3957", name: "SHYMA SIDDIQUE KP"}, {admissionNo: "3958", name: "AYISHA NAZRA"},
+                {admissionNo: "3959", name: "HAIZA HANIYA T"}, {admissionNo: "3960", name: "AIRIN INAAYA"},
+                {admissionNo: "3961", name: "RISHA ALI K"}, {admissionNo: "3962", name: "FATHIMATHU ZZAHRA MC"},
+                {admissionNo: "3963", name: "NASHWA FATHIMA KC"}
+            ],
+            "1 B": [
+                {admissionNo: "3880", name: "SAYYID MUHAMMED UBAIDH THANGAL KC"}, {admissionNo: "3885", name: "MUHAMMED ALOOF K"},
+                {admissionNo: "3964", name: "MUHAMMED HANAN C"}, {admissionNo: "3965", name: "MUHAMMAD HYZIN K"},
+                {admissionNo: "3966", name: "MUHAMMAD RAZAN K"}, {admissionNo: "3967", name: "MUHAMMED FAIZAAN K"},
+                {admissionNo: "3968", name: "MUHAMMED SHEFIN K"}, {admissionNo: "3969", name: "MUHAMMAD HADI"},
+                {admissionNo: "3970", name: "MUHAMMAD BISHR A"}, {admissionNo: "3971", name: "MUHAMMED AYZAN K"},
+                {admissionNo: "3972", name: "MUHAMMED AFNAN K"}, {admissionNo: "3973", name: "MUHAMMED FAHDHAN K"},
+                {admissionNo: "3974", name: "MUHAMMED SHAYAN K"}, {admissionNo: "3975", name: "MUHAMMED MUBEEN KV"},
+                {admissionNo: "3976", name: "MUHAMMED RAIZAN P"}, {admissionNo: "3986", name: "LAHAN MUHAMMED K"},
+                {admissionNo: "4001", name: "MUHAMMED THANZEEL RK"}, {admissionNo: "4007", name: "IYAD IBN ALI K"},
+                {admissionNo: "3922", name: "ANSIBA KV"}, {admissionNo: "3977", name: "HYRA FATHIMA"},
+                {admissionNo: "3978", name: "AYISHA RENZA C"}, {admissionNo: "3979", name: "ZAINA FATHIMA K"},
+                {admissionNo: "3980", name: "FATHIMA INAYA K"}, {admissionNo: "3981", name: "SHAZA FATHIMA M"},
+                {admissionNo: "3982", name: "AZWA SHEZA K"}, {admissionNo: "3983", name: "FATHIMA NASHVA A"},
+                {admissionNo: "3984", name: "IZRA KP"}, {admissionNo: "3985", name: "AZRA BATHOOL V"}
+            ],
+            "2 A": [
+                {admissionNo: "3819", name: "MUHAMMED SAHL P"}, {admissionNo: "3824", name: "MUHAMMED FAIZAN K"},
+                {admissionNo: "3875", name: "MISHAN VT"}, {admissionNo: "3882", name: "MUHAMMED THAMEEM A"},
+                {admissionNo: "3883", name: "MUHAMMED UVAIS A"}, {admissionNo: "3884", name: "MUHAMMED SHEZIN MO"},
+                {admissionNo: "3886", name: "MUHAMMED ZAKIH P"}, {admissionNo: "3887", name: "MUHAMMED AKHFASH ABZI A"},
+                {admissionNo: "3991", name: "SHAMIL MUHAMMED P"}, {admissionNo: "3857", name: "FATHIMA FAIZA KT"},
+                {admissionNo: "3905", name: "FYHA MARIYAM K"}, {admissionNo: "3906", name: "HUDHA MEHARIN P"},
+                {admissionNo: "3907", name: "FATHIMA NAJA P"}, {admissionNo: "3908", name: "RAZA MEHARIN K"},
+                {admissionNo: "3910", name: "SHANA NASRIN P"}, {admissionNo: "3911", name: "FEZA BASI K"},
+                {admissionNo: "3912", name: "HAIZA FATHIMA K"}, {admissionNo: "3913", name: "AIZA HANIYA K"},
+                {admissionNo: "3914", name: "ISHA MEHRIN K"}, {admissionNo: "3916", name: "MARIYAM EZLIN KT"},
+                {admissionNo: "3987", name: "HEZEL FATHIMA M"}
+            ],
+            "2 B": [
+                {admissionNo: "3840", name: "MUHAMMED ASIM THANGAL KC"}, {admissionNo: "3852", name: "MUHAMMED HASHIM E"},
+                {admissionNo: "3888", name: "MUHAMMED AMEEN RK"}, {admissionNo: "3889", name: "MUHAMMED FAYAS T"},
+                {admissionNo: "3890", name: "MUHAMMED SHAMIL T"}, {admissionNo: "3891", name: "MUHAMMED RAZAN K"},
+                {admissionNo: "3892", name: "MUHAMMED BURHAN KK"}, {admissionNo: "3893", name: "MUHAMMED RASEEL E"},
+                {admissionNo: "3894", name: "MUHAMMED SWALIH VP"}, {admissionNo: "3895", name: "ALHAN AHAMMED A"},
+                {admissionNo: "3896", name: "MUHAMMED HADI KV"}, {admissionNo: "3897", name: "MUHAMMED AYAN CK"},
+                {admissionNo: "3898", name: "MUHAMMED RAZEEN KV"}, {admissionNo: "3899", name: "MUHAMMED AYZAL TP"},
+                {admissionNo: "3901", name: "MUHAMMED ZAYAN K"}, {admissionNo: "3902", name: "MUHAMMED ZIYAN K"},
+                {admissionNo: "3989", name: "MUHAMMED RABEEH CK"}, {admissionNo: "3992", name: "MUHAMMED RAYAN M"},
+                {admissionNo: "3855", name: "FATHIMA FARHA RK"}, {admissionNo: "3858", name: "YASMIN THWAIBA K"},
+                {admissionNo: "3915", name: "SHANZA BATHOOL K"}, {admissionNo: "3917", name: "NAHANA FATHIMA PP"},
+                {admissionNo: "3919", name: "ALIFA MEHARIN KV"}, {admissionNo: "3920", name: "IZA AYRIN K"}
+            ],
+            "3 A": [
+                {admissionNo: "3759", name: "MUHAMMED SIYAN K"}, {admissionNo: "3817", name: "MUHAMMED BASIM AT"},
+                {admissionNo: "3818", name: "MUHAMMED NAEEM P"}, {admissionNo: "3820", name: "MUHAMMED SIYAN M"},
+                {admissionNo: "3822", name: "MUHAMMED RABEEH P"}, {admissionNo: "3823", name: "MUHAMMED SHAMIL A"},
+                {admissionNo: "3826", name: "MUHAMMED HANAN K"}, {admissionNo: "3827", name: "MUHAMMED RAZAN C"},
+                {admissionNo: "3828", name: "MUHAMMED SHAMEEL K P"}, {admissionNo: "3994", name: "MUHAMMED SHAZIL"},
+                {admissionNo: "3997", name: "MUHAMMED AADIL PK"}, {admissionNo: "3775", name: "NISA FATHIMA K"},
+                {admissionNo: "3829", name: "LAIBA FATHIMA A T"}, {admissionNo: "3830", name: "AJWA FATHIMA KC"},
+                {admissionNo: "3831", name: "HAIFA ZAHWA P"}, {admissionNo: "3832", name: "AYISHA IZZA PC"},
+                {admissionNo: "3834", name: "HANNA FATHIMA K"}, {admissionNo: "3836", name: "RIZA MARIYAM K"},
+                {admissionNo: "3837", name: "FAIHA FEBIN K"}, {admissionNo: "3838", name: "JAZA MEHRIN A"},
+                {admissionNo: "3839", name: "SAFA JASMIN A"}, {admissionNo: "3863", name: "AYISHA HENNA M"},
+                {admissionNo: "3874", name: "FATHIMA ZUHRA M"}
+            ],
+            "3 B": [
+                {admissionNo: "3766", name: "MUHAMMED ANAS KT"}, {admissionNo: "3783", name: "MUHAMMED ZAYAN V"},
+                {admissionNo: "3821", name: "MUHAMMED SWALIH A"}, {admissionNo: "3825", name: "MUHAMMED ASEEM P"},
+                {admissionNo: "3841", name: "MUHAMMED HADI C"}, {admissionNo: "3842", name: "AJLAN RK"},
+                {admissionNo: "3843", name: "MUHAMMED RABEEH P"}, {admissionNo: "3844", name: "MUHAMMED RABEEH M"},
+                {admissionNo: "3845", name: "MUHAMMED ZAYAN KP"}, {admissionNo: "3846", name: "MUHAMMED AHSAN KP"},
+                {admissionNo: "3847", name: "MUHAMMED RAYYAN KC"}, {admissionNo: "3848", name: "MUHAMMED HANAN K"},
+                {admissionNo: "3849", name: "MUHAMMED ANSHID PK"}, {admissionNo: "3853", name: "MUHAMMED SWABAH K"},
+                {admissionNo: "3995", name: "MUHAMMED IHSAN K"}, {admissionNo: "3776", name: "RASHA FATHIMA A"},
+                {admissionNo: "3794", name: "HUDA MEHRIN C"}, {admissionNo: "3795", name: "AYISHA NAEEMA BEEVI V"},
+                {admissionNo: "3797", name: "NUBA FATHIMA C"}, {admissionNo: "3833", name: "FATHIMA INSHA A"},
+                {admissionNo: "3835", name: "FAIHA FATHIMA K"}, {admissionNo: "3854", name: "AMNA RIZA A"},
+                {admissionNo: "3856", name: "SAMEEHA KV"}, {admissionNo: "3859", name: "AYISHA DANA M"},
+                {admissionNo: "3860", name: "FATHIMA FARZIN V"}, {admissionNo: "3861", name: "AYISHA FAIHA M"},
+                {admissionNo: "3873", name: "FATHIMA RUSHDA M"}, {admissionNo: "3926", name: "FILZA FATHIMA V K"},
+                {admissionNo: "3988", name: "AIYSHA ZELLA"}
+            ],
+            "4 A": [
+                {admissionNo: "3760", name: "MUHAMMED MIMRAH C"}, {admissionNo: "3761", name: "ZAINUL HABID K"},
+                {admissionNo: "3764", name: "MUHAMMED HASHIM KP"}, {admissionNo: "3765", name: "MUHAMMED THAMEEM K"},
+                {admissionNo: "3767", name: "MUHAMMED NAHAS K"}, {admissionNo: "3768", name: "MUZAMMIL P"},
+                {admissionNo: "3769", name: "HAIZAM TP"}, {admissionNo: "3770", name: "MIHJAH M"},
+                {admissionNo: "3771", name: "MUHAMMED FAHEEM AT"}, {admissionNo: "3879", name: "MUHAMMED AFLAH"},
+                {admissionNo: "3938", name: "MUHAMMED AADIL K"}, {admissionNo: "3990", name: "SAHIL MUHAMMED P"},
+                {admissionNo: "3654", name: "LIYA FATHIMA N"}, {admissionNo: "3711", name: "FATHIMA MINHA M"},
+                {admissionNo: "3726", name: "SANHA K"}, {admissionNo: "3772", name: "FATHIMA MUJMILA K"},
+                {admissionNo: "3773", name: "AYISHA DIYA C"}, {admissionNo: "3774", name: "SANHA SHARIN TC"},
+                {admissionNo: "3777", name: "YUMNA FATHIMA K"}, {admissionNo: "3778", name: "FATHIMA SHAHANA"},
+                {admissionNo: "3779", name: "RASHIDA"}, {admissionNo: "3781", name: "AYISHA MEHAVISH K"},
+                {admissionNo: "3802", name: "AYISHA MADEEHA E"}, {admissionNo: "3871", name: "FAIHA A"},
+                {admissionNo: "3923", name: "HAWWA MEHARAK PC"}
+            ],
+            "4 B": [
+                {admissionNo: "3720", name: "MUHAMMED AZEEN"}, {admissionNo: "3762", name: "MUHAMMED THASNEEM"},
+                {admissionNo: "3782", name: "MUHAMMED NAEEM"}, {admissionNo: "3784", name: "MUHAMMED HISHAM"},
+                {admissionNo: "3785", name: "MUHAMMED ZAYAN"}, {admissionNo: "3786", name: "AMAN ABDULLA"},
+                {admissionNo: "3787", name: "MUHAMMED SHAZIN"}, {admissionNo: "3788", name: "MEHFIZ ABAN"},
+                {admissionNo: "3789", name: "MUHAMMED AMAN"}, {admissionNo: "3790", name: "NAZEEH MUHAMMED"},
+                {admissionNo: "3792", name: "MUHAMMED RAZEEN"}, {admissionNo: "3793", name: "MUHAMMED NAZIL"},
+                {admissionNo: "3816", name: "MUHAMMED RABEEH"}, {admissionNo: "3727", name: "JANNA SHERIN"},
+                {admissionNo: "3731", name: "AYISHA MALEEHA"}, {admissionNo: "3796", name: "SHEZA FATHIMA"},
+                {admissionNo: "3798", name: "FATHIMA ZELLA CK"}, {admissionNo: "3799", name: "MEHARIN"},
+                {admissionNo: "3800", name: "FATHIMA JINANA"}, {admissionNo: "3801", name: "RIYA FATHIMA"},
+                {admissionNo: "3811", name: "AYISHA MINNA"}
+            ],
+            "5 A": [
+                {admissionNo: "3643", name: "MUHAMMAD MUHSIN. K. C"}, {admissionNo: "3644", name: "MUHAMMAD QASIM. P"},
+                {admissionNo: "3672", name: "MUHAMMED RAFIH. K"}, {admissionNo: "3701", name: "MUHAMMED SUFYAN. O"},
+                {admissionNo: "3702", name: "MUHAMMAD RAZEEN.C"}, {admissionNo: "3703", name: "MUHAMMAD FAHEEM.A"},
+                {admissionNo: "3706", name: "MUHAMMAD AMEEN. K"}, {admissionNo: "3707", name: "MUHAMMAD RABEEH. K"},
+                {admissionNo: "3709", name: "MUHAMMED AYAN. K"}, {admissionNo: "3710", name: "MUHAMMED JASEEL. A"},
+                {admissionNo: "3758", name: "MUHAMMAD LAFIN. C"}, {admissionNo: "3864", name: "MUHAMMAD HADI. K"},
+                {admissionNo: "3934", name: "MUHAMMED RABEEH C P"}, {admissionNo: "3996", name: "MUHAMMED RAAID PK"},
+                {admissionNo: "3589", name: "ANHA FATHIMA"}, {admissionNo: "3653", name: "FATHIMA MEHANAS"},
+                {admissionNo: "3656", name: "FATHIMA DILNA"}, {admissionNo: "3712", name: "FATHIMA SHIFA. K. C"},
+                {admissionNo: "3713", name: "FATHIMA HUSNA"}, {admissionNo: "3714", name: "FATHIMA RINSHA"},
+                {admissionNo: "3715", name: "AYISHA FARWA"}, {admissionNo: "3716", name: "MUNJIYA"},
+                {admissionNo: "3717", name: "AYISHA JANNA"}, {admissionNo: "3718", name: "FATHIMA BAHAJA"},
+                {admissionNo: "3753", name: "RIZA RISHIN"}, {admissionNo: "3803", name: "HIZA FATHIMA"},
+                {admissionNo: "3937", name: "NAZRA NAHAAZ"}
+            ],
+            "5 B": [
+                {admissionNo: "3628", name: "MUHAMMED RAJIH AT"}, {admissionNo: "3629", name: "MUHAMMAD AMJAD"},
+                {admissionNo: "3630", name: "HADHI MUHAMMED KP"}, {admissionNo: "3632", name: "MUHAMMED ALHAN K"},
+                {admissionNo: "3648", name: "ABDUL BAYIS"}, {admissionNo: "3664", name: "MUHAMMED ARSAL C"},
+                {admissionNo: "3668", name: "MUHAMMED FAHEEM M"}, {admissionNo: "3670", name: "ASEEL MUHAMMED KV"},
+                {admissionNo: "3719", name: "MUHAMMAD RAYAN"}, {admissionNo: "3721", name: "MUHAMMAD AFLAH K"},
+                {admissionNo: "3722", name: "MUHAMMED RAZI M"}, {admissionNo: "3723", name: "MUHAMMAD RAIHAN"},
+                {admissionNo: "3724", name: "HADHI MUHAMMED M"}, {admissionNo: "3878", name: "MUHAMMED HAMDAN"},
+                {admissionNo: "3637", name: "JAZA P"}, {admissionNo: "3684", name: "AYSHA SHANA BEEVI KE"},
+                {admissionNo: "3699", name: "SHAHNA CM"}, {admissionNo: "3728", name: "FATHIMA NAJWANA E"},
+                {admissionNo: "3729", name: "FATHIMA SHAHANA AP"}, {admissionNo: "3730", name: "AYSHA M"},
+                {admissionNo: "3732", name: "INSHA FATHIMA KC"}, {admissionNo: "3733", name: "AYSHA NUHA K"},
+                {admissionNo: "3735", name: "ADEELA FATHIMA E"}, {admissionNo: "3736", name: "SANHA FATHIMA K"},
+                {admissionNo: "3870", name: "MEHNA FATHIMA KK"}
+            ],
+            "6 A": [
+                {admissionNo: "3554", name: "MUHAMMED RAYAN K"}, {admissionNo: "3419", name: "MUHAMMED SINAN E"},
+                {admissionNo: "3560", name: "MUHAMMED MINHAL C"}, {admissionNo: "3562", name: "MUHAMMED AJAS A"},
+                {admissionNo: "3574", name: "MUHAMMED FAIZ RK"}, {admissionNo: "3580", name: "MUHAMMED JAZAL K"},
+                {admissionNo: "3627", name: "HADHI MASHOOD K"}, {admissionNo: "3631", name: "MUHAMMED HASHIM A"},
+                {admissionNo: "3633", name: "MUHAMMED SHAH T"}, {admissionNo: "3663", name: "MUHAMMED A"},
+                {admissionNo: "3669", name: "MUHAMMED RAZIN RK"}, {admissionNo: "3674", name: "MUHAMMED ASHMIL RK"},
+                {admissionNo: "3746", name: "MUHAMMED JAZAL M"}, {admissionNo: "3993", name: "MUHAMMED MANHAL K"},
+                {admissionNo: "4002", name: "MUHAMMED ANSHIF KV"}, {admissionNo: "4003", name: "MUHAMMED RISWAN K"},
+                {admissionNo: "4004", name: "MUHAMMED NASAL C"}, {admissionNo: "3493", name: "MUHAMMED SHADIL K"},
+                {admissionNo: "3587", name: "FATHIMA NADHVA P"}, {admissionNo: "3594", name: "FATHIMA SHIFA PK"},
+                {admissionNo: "3598", name: "ANSHIDA SHERIN A"}, {admissionNo: "3635", name: "MIZNA M"},
+                {admissionNo: "3636", name: "RANA FATHIMA C"}, {admissionNo: "3638", name: "AYISHA SHABA K"},
+                {admissionNo: "3639", name: "FATHIMA RAZANA K"}, {admissionNo: "3640", name: "NUZHA NOURIN V"},
+                {admissionNo: "3641", name: "NIHANA K"}, {admissionNo: "3676", name: "HIBA SHERIN K"},
+                {admissionNo: "3677", name: "MUFEEDHA T"}, {admissionNo: "3678", name: "FANNANA KC"},
+                {admissionNo: "3804", name: "FATHIMA HANA P"}, {admissionNo: "3814", name: "JENNA FATHIMA M"},
+                {admissionNo: "4005", name: "FATHIMA HAMNA K"}
+            ],
+            "6 B": [
+                {admissionNo: "3561", name: "ABDUL VAHID C"}, {admissionNo: "3565", name: "MUHAMMED ADEEB A"},
+                {admissionNo: "3566", name: "NAHAN MUHAMMED K"}, {admissionNo: "3569", name: "MUHAMMED ABID M"},
+                {admissionNo: "3570", name: "MUHAMMED HADI KP"}, {admissionNo: "3642", name: "MUHAMMED SHAMIL KM"},
+                {admissionNo: "3645", name: "MUHAMMED SHIFIN K"}, {admissionNo: "3646", name: "MUHAMMED ALI AHSAN KM"},
+                {admissionNo: "3651", name: "MUHAMMED SINAN M"}, {admissionNo: "3652", name: "MUHAMMED SHAN K"},
+                {admissionNo: "3667", name: "MUHAMMED ANSAB VP"}, {admissionNo: "3671", name: "SAYYID MUHAMMED UVAIS THANGAL"},
+                {admissionNo: "3673", name: "MUHAMMED RAZAN K"}, {admissionNo: "3700", name: "MUHAMMAD MIFZAL A"},
+                {admissionNo: "3584", name: "FATHIMA MARJANA P"}, {admissionNo: "3585", name: "AMANA FATHIMA K"},
+                {admissionNo: "3600", name: "FATHIMA TP"}, {admissionNo: "3609", name: "RIFA NAHVIN K"},
+                {admissionNo: "3657", name: "FIDHA FATHIMA KA"}, {admissionNo: "3659", name: "SHAIKHA FATHIMA O"},
+                {admissionNo: "3660", name: "HANA FATHIMA MO"}, {admissionNo: "3675", name: "SAJA HANOON"},
+                {admissionNo: "3679", name: "FATHIMA LASIN KP"}, {admissionNo: "3680", name: "FILDA VP"},
+                {admissionNo: "3682", name: "FATHIMA INSHA KV"}, {admissionNo: "3877", name: "FATHIMA SANA"},
+                {admissionNo: "3927", name: "FAIHA FATHIMA VK"}, {admissionNo: "1001", name: "FATHIMA SHIFA"}
+            ],
+            "7 A": [
+                {admissionNo: "3373", name: "MUHAMMED SHAHIL C"}, {admissionNo: "3491", name: "MUHAMMED AFLAH E"},
+                {admissionNo: "3492", name: "MUHAMMED FIRDOUS RK"}, {admissionNo: "3494", name: "MUHAMMED AMAN K"},
+                {admissionNo: "3513", name: "MUHAMMED SWALIH CT"}, {admissionNo: "3559", name: "MUHAMMED RABEEH K"},
+                {admissionNo: "3563", name: "MUHAMMED ZAAYAN M"}, {admissionNo: "3564", name: "MUHAMMED HANAN M"},
+                {admissionNo: "3567", name: "ASHAD KP"}, {admissionNo: "3568", name: "MUHAMMED SHAHIN K"},
+                {admissionNo: "3608", name: "MUHAMMED SHABAZ K"}, {admissionNo: "3612", name: "MUHAMMED SHIFIN P"},
+                {admissionNo: "3695", name: "MUHAMMED SHAHEEN MC"}, {admissionNo: "3931", name: "MUHAMMED AFLAH PK"},
+                {admissionNo: "3936", name: "MUHAMMED HASEEB P"}, {admissionNo: "3433", name: "FATHIMA SHAHMA BEEVI KC"},
+                {admissionNo: "3465", name: "FAHIMA SHERIN K"}, {admissionNo: "3468", name: "SHAMNA V"},
+                {admissionNo: "3498", name: "FATHIMA SANA A"}, {admissionNo: "3507", name: "NAJA FATHIMA C"},
+                {admissionNo: "3586", name: "INAAYA SUBAIR.K"}, {admissionNo: "3591", name: "FATHIMA NARJIS K"},
+                {admissionNo: "3592", name: "FATHIMA LIYA C"}, {admissionNo: "3616", name: "FARHANA VK"},
+                {admissionNo: "3930", name: "IRFANA VK"}, {admissionNo: "3932", name: "RANA E"}
+            ],
+            "7 B": [
+                {admissionNo: "3509", name: "MUHAMMED RIZIL M"}, {admissionNo: "3558", name: "MUHAMMED RAZI VK"},
+                {admissionNo: "3572", name: "MUHAMMED DHANI VP"}, {admissionNo: "3573", name: "MUHAMMED BAREEK C"},
+                {admissionNo: "3576", name: "MUHAMMED SAHL O"}, {admissionNo: "3578", name: "MUHAMMED MAZIN V"},
+                {admissionNo: "3607", name: "MUHAMMED ANSHIF P"}, {admissionNo: "3614", name: "MUHAMMED SHUHAIB A"},
+                {admissionNo: "3621", name: "MUHAMMED RAZIL M"}, {admissionNo: "3745", name: "MUHAMMED FAHEEM E"},
+                {admissionNo: "3929", name: "MUHAMMED SHAMIL K"}, {admissionNo: "3464", name: "AMEENA AZMIN K"},
+                {admissionNo: "3519", name: "RIYA FATHIMA M"}, {admissionNo: "3521", name: "HADIYA P"},
+                {admissionNo: "3528", name: "NAFIYA PP"}, {admissionNo: "3593", name: "RANA FATHIMA C"},
+                {admissionNo: "3595", name: "AYISHA HINA P"}, {admissionNo: "3596", name: "FATHIMA NADWA M"},
+                {admissionNo: "3597", name: "RIDHA SHANAVAS KM"}, {admissionNo: "3599", name: "FATHIMA FEBINA"},
+                {admissionNo: "3605", name: "RIHAMA SHERIN C"}, {admissionNo: "3613", name: "HANA FATHIMA RK"},
+                {admissionNo: "3692", name: "FATHIMA THAMANNA O"}, {admissionNo: "3693", name: "HEAMI MARIYAM M"},
+                {admissionNo: "3694", name: "RIFA MO"}, {admissionNo: "3744", name: "FATHIMA SHIMAZ T"}
+            ],
+            "8 A": [
+                {admissionNo: "3344", name: "MUHAMMED SINAN K"}, {admissionNo: "3420", name: "MUHAMMED ASHMIL M"},
+                {admissionNo: "3425", name: "SHABEEB RAHMAN RK"}, {admissionNo: "3454", name: "MUHAMMED HASEEB K"},
+                {admissionNo: "3546", name: "MUHAMMED RABEEH K"}, {admissionNo: "3738", name: "RISHAD M"},
+                {admissionNo: "3867", name: "MIDLAJ M MUHAMMED"}, {admissionNo: "4006", name: "MUHAMMED SHAMMAS N"},
+                {admissionNo: "3497", name: "FATHIMA SAHLA KC"}, {admissionNo: "3499", name: "NAISHANA NASNIN K"},
+                {admissionNo: "3500", name: "JUNAINA K"}, {admissionNo: "3501", name: "MEHNA NOORIN KP"},
+                {admissionNo: "3502", name: "FATHIMA MIHJANA A"}, {admissionNo: "3503", name: "RUSHDA FATHIMA C"},
+                {admissionNo: "3504", name: "FATHIMA FAIHA K"}, {admissionNo: "3505", name: "HANNA FATHIMA"},
+                {admissionNo: "3506", name: "LIYANA K"}, {admissionNo: "3518", name: "FILZA KP"},
+                {admissionNo: "3622", name: "RISLA KC"}, {admissionNo: "3688", name: "ANHA K"},
+                {admissionNo: "3747", name: "JALLA FATHIMA M"}
+            ],
+            "8 B": [
+                {admissionNo: "3351", name: "MUHAMMED NAFIH P"}, {admissionNo: "3445", name: "MUHAMMED SHAFEEQ K"},
+                {admissionNo: "3455", name: "SHADIN ANAS KT"}, {admissionNo: "3459", name: "MUHAMMED ZAHAN K"},
+                {admissionNo: "3460", name: "ANFAS CK"}, {admissionNo: "3510", name: "FINAS NAIF K"},
+                {admissionNo: "3511", name: "MUHAMMED RAZIN KV"}, {admissionNo: "3516", name: "MUHAMMED NAJAH M"},
+                {admissionNo: "3618", name: "MUHAMMED ASHMIL KP"}, {admissionNo: "3619", name: "MUHAMMED FAYIS P"},
+                {admissionNo: "3626", name: "MUHAMMED SHUAIM K"}, {admissionNo: "3691", name: "MUHMMED SAHAL K"},
+                {admissionNo: "3739", name: "SHAHAD M"}, {admissionNo: "3740", name: "MUHAMMED ADIL M"},
+                {admissionNo: "3407", name: "FATHIMA ASNA KV"}, {admissionNo: "3446", name: "RINHA MEHBIN C"},
+                {admissionNo: "3450", name: "FATHIMA NIHLA KP"}, {admissionNo: "3517", name: "FATHIMA HAMNA M"},
+                {admissionNo: "3520", name: "FATHIMA ILFA KV"}, {admissionNo: "3524", name: "HUDHA FATHIMA A K"},
+                {admissionNo: "3527", name: "ZIYA RUSHDA P"}, {admissionNo: "3555", name: "FIDHA MARIYAM K"},
+                {admissionNo: "3689", name: "FEBA BASI K"}
+            ],
+            "9 A": [
+                {admissionNo: "3326", name: "MUHAMMED SAHAL PK"}, {admissionNo: "3355", name: "MUHAMMED ASHBAL TP"},
+                {admissionNo: "3368", name: "MUHAMMED ASEEM ZIYAD C"}, {admissionNo: "3374", name: "MUHAMMED AJMAL T"},
+                {admissionNo: "3376", name: "MUHAMMED SINAN K"}, {admissionNo: "3436", name: "MUHAMMED SHAHABAS KV"},
+                {admissionNo: "3442", name: "AMEEN RISVIN K"}, {admissionNo: "3444", name: "MUHAMMED SHAMMAS M"},
+                {admissionNo: "3458", name: "MUHAMMED NIHAL CK"}, {admissionNo: "3463", name: "MUHAMMED RASHAD K"},
+                {admissionNo: "3808", name: "MUHAMMED FADI M"}, {admissionNo: "3876", name: "MUHAMMED SAHABAS A"},
+                {admissionNo: "3928", name: "MUHAMMED RINSHAD"}, {admissionNo: "3933", name: "MUHAMMED SHAMMAS M"},
+                {admissionNo: "3999", name: "MUHAMMED HISHAM P"}, {admissionNo: "3336", name: "HAIFA KP"},
+                {admissionNo: "3360", name: "FATHIMA HUDA P"}, {admissionNo: "3385", name: "SANHA FATHIMA C"},
+                {admissionNo: "3428", name: "AMNA A"}, {admissionNo: "3429", name: "AYISHA HANNA TP"},
+                {admissionNo: "3431", name: "FATHIMA HANNA K"}, {admissionNo: "3432", name: "ANSHA FATHIMA TC"},
+                {admissionNo: "3434", name: "AYISHA MIJLA K"}, {admissionNo: "3435", name: "AMJADA RK"},
+                {admissionNo: "3447", name: "LIYA FATHIMA K"}, {admissionNo: "3448", name: "FATHIMA LAYANA M"},
+                {admissionNo: "3449", name: "FATHIMA SHIFNA C"}, {admissionNo: "3451", name: "MUFLIHA K"},
+                {admissionNo: "3452", name: "FAYIZA K"}, {admissionNo: "3453", name: "FATHIMA HANNA PK"},
+                {admissionNo: "3466", name: "LIYANA K"}, {admissionNo: "3467", name: "FATHIMA SHIFNA K"},
+                {admissionNo: "3469", name: "DIYA FASLI KV"}, {admissionNo: "3471", name: "FATHIMA MISLA K"},
+                {admissionNo: "3488", name: "ASLAHATHULMUKHTHARA MK"}, {admissionNo: "3925", name: "SABNA MARIYAM T M"},
+                {admissionNo: "3935", name: "RIFA THASNI"}
+            ],
+            "9 B": [
+                {admissionNo: "3203", name: "MUHAMMED SINAN P"}, {admissionNo: "3204", name: "FATHIMA RIDA K"}
+            ],
+            "10 A": [
+                {admissionNo: "3322", name: "MUHAMMED JASIL K"}, {admissionNo: "3323", name: "MUHAMMED SAHL C"},
+                {admissionNo: "3341", name: "MUHAMMMED SHADIL"}, {admissionNo: "3354", name: "MUHAMMED SHAMIL K"},
+                {admissionNo: "3365", name: "MUHAMMED AJSAL K"}, {admissionNo: "3366", name: "MUHAMMED JASIL P"},
+                {admissionNo: "3382", name: "MISHAL HUSSAIN"}, {admissionNo: "3390", name: "MUHAMMED FASIL"},
+                {admissionNo: "3394", name: "MUHAMMED NAFIH"}, {admissionNo: "3416", name: "MUHAMMED FARIS RK"},
+                {admissionNo: "3486", name: "MUHAMMED MURSHID"}, {admissionNo: "3741", name: "MUHAMMED JINAN RK"},
+                {admissionNo: "3866", name: "MUHAMMED FAHIM A"}, {admissionNo: "3317", name: "RIYA FATHIMA"},
+                {admissionNo: "3327", name: "SAHLA SHERIN"}, {admissionNo: "3328", name: "HIBA AYISHA VP"},
+                {admissionNo: "3356", name: "FATHIMA NAJA CK"}, {admissionNo: "3358", name: "SANA FATHIMA A"},
+                {admissionNo: "3364", name: "NAJA FATHIMA K"}, {admissionNo: "3367", name: "MINHA FATHIMA C"},
+                {admissionNo: "3369", name: "KADEEJA NAINA PC"}, {admissionNo: "3371", name: "HAMDA FATHIMA"},
+                {admissionNo: "3375", name: "AYISHA MINHA"}, {admissionNo: "3379", name: "SALVA MO"},
+                {admissionNo: "3380", name: "FATHIMA FIDA"}, {admissionNo: "3381", name: "FATHIMA SANHA"},
+                {admissionNo: "3386", name: "FATHIMA HADIYA"}, {admissionNo: "3387", name: "FATHIMA SHIFANA"},
+                {admissionNo: "3400", name: "FATHIMA RIYA T"}, {admissionNo: "3401", name: "FATHIMA LABEEBABEEVI VP"},
+                {admissionNo: "3405", name: "LAMIYA OP"}, {admissionNo: "3557", name: "FATHIMA SHANZA M"},
+                {admissionNo: "3603", name: "FATHIMA REESHA K"}, {admissionNo: "3685", name: "JAZA FATHIMA"},
+                {admissionNo: "3872", name: "RASHEEQA SHIRIN K"}
+            ],
+            "10 B": [
+                {admissionNo: "3103", name: "MUHAMMED JUNAID P"}, {admissionNo: "3104", name: "AYSHA HIBA K"}
+            ],
+            "+1": [
+                {admissionNo: "3320", name: "MUBASHIR RK"}, {admissionNo: "3330", name: "MUHAMMED BISHR PC"},
+                {admissionNo: "3998", name: "MUHAMMED SHUHAIB K"}, {admissionNo: "3299", name: "FATHIMA RIFA K"},
+                {admissionNo: "3316", name: "RINSHA FATHIMA K"}, {admissionNo: "3318", name: "HADIYA VP"},
+                {admissionNo: "3319", name: "FATHIMA RUSHDA VP"}, {admissionNo: "3332", name: "FATHIMA JUMANA T"},
+                {admissionNo: "3335", name: "MAHADIYA FATHIMA P"}, {admissionNo: "3338", name: "FATHIMA HIBA MO"},
+                {admissionNo: "3339", name: "SHARAFINA MOL O"}, {admissionNo: "3340", name: "FATHIMA HUSNA C"},
+                {admissionNo: "3342", name: "SHAHIDA SHERIN A"}, {admissionNo: "3395", name: "FATHIMA HINA K"},
+                {admissionNo: "3602", name: "FATHIMA RIFA KM"}
+            ],
+            "+2": [
+                {admissionNo: "3275", name: "MUHAMMED ANSHAD RK"}, {admissionNo: "3278", name: "MUHAMMED FALIL MO"},
+                {admissionNo: "3283", name: "MUHAMMED SINAN P"}, {admissionNo: "3307", name: "MUHAMMED SHAMEEL VK"},
+                {admissionNo: "3417", name: "MUHAMMED FAYIZ KV"}, {admissionNo: "3195", name: "FATHIMA SHIFANA AT"},
+                {admissionNo: "3231", name: "FATHIMA NAHNA KV"}, {admissionNo: "3257", name: "FADHANA E"},
+                {admissionNo: "3267", name: "FATHIMA DILNA KV"}, {admissionNo: "3276", name: "FATHIMA DILNA P"},
+                {admissionNo: "3285", name: "SHANIBA THASNEEM E"}, {admissionNo: "3287", name: "NIDHA THASNEEM E"},
+                {admissionNo: "3300", name: "FATHIMA RANA KP"}, {admissionNo: "3310", name: "FATHIMA SANA MC"}
+            ]
+        };
+
+        window.studentDatabase = JSON.parse(localStorage.getItem('varisamkhya_students')) || defaultStudentDatabase;
+        window.records = JSON.parse(localStorage.getItem('varisamkhya_records')) || [];
+        const classList = Object.keys(window.studentDatabase);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initClassDropdowns();
+            document.getElementById('form-date').valueAsDate = new Date();
+            filterData();
+            renderDashboard();
+            renderDirectory();
+            initFirebaseAndSync();
+        });
+
+        // Initialize Firebase Cloud Sync
+        async function initFirebaseAndSync() {
+            if (!firebaseConfig) return;
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                userId = auth.currentUser?.uid || crypto.randomUUID();
+                isCloudSyncActive = true;
+                
+                document.getElementById('sync-text').innerText = "Synced";
+                document.getElementById('sync-status').className = "cursor-pointer flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[11px] font-medium";
+
+                const recordsCol = collection(db, 'artifacts', appId, 'users', userId, 'records');
+                onSnapshot(recordsCol, (snapshot) => {
+                    const cloudRecords = [];
+                    snapshot.forEach(docSnap => {
+                        cloudRecords.push({ id: docSnap.id, ...docSnap.data() });
+                    });
+                    if (cloudRecords.length > 0) {
+                        window.records = cloudRecords;
+                        saveToLocalStorage();
+                        filterData();
+                        renderDashboard();
+                        renderDirectory();
+                    }
+                });
+            } catch (err) {
+                console.error("Firebase sync init error:", err);
+            }
+        }
+
+        // Tab Switching
+        window.switchTab = function(tabName) {
+            ['dashboard', 'add', 'registry', 'students'].forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                const btn = document.getElementById(`nav-btn-${t}`);
+                if (t === tabName) {
+                    el.classList.remove('hidden');
+                    if (btn) btn.className = "flex flex-col items-center space-y-1 text-indigo-600 dark:text-indigo-400 transition";
+                } else {
+                    el.classList.add('hidden');
+                    if (btn) btn.className = "flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition";
+                }
+            });
+            if(tabName === 'dashboard') renderDashboard();
+            if(tabName === 'registry') filterData();
+            if(tabName === 'students') renderDirectory();
+        }
+
+        // Dark Mode Toggle
+        window.toggleDarkMode = function() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        // Populate Dropdowns
+        function initClassDropdowns() {
+            const formClass = document.getElementById('form-class');
+            const filterClass = document.getElementById('filter-class');
+            const dirClass = document.getElementById('directory-class-select');
+            const modalClass = document.getElementById('modal-student-class');
+
+            [formClass, filterClass, dirClass, modalClass].forEach(el => {
+                if(!el) return;
+                const currentVal = el.value;
+                el.innerHTML = el.id === 'filter-class' ? '<option value="">All Classes</option>' : (el.id === 'form-class' ? '<option value="">Select Class...</option>' : '');
+                classList.forEach(cls => {
+                    el.add(new Option(`Class ${cls}`, cls));
+                });
+                if(currentVal) el.value = currentVal;
+            });
+        }
+
+        // Class Change in Form
+        window.onClassChange = function() {
+            const cls = document.getElementById('form-class').value;
+            const editId = document.getElementById('edit-record-id').value;
+            if(!editId) {
+                document.getElementById('form-adm').value = '';
+                document.getElementById('form-name').value = '';
+            }
+
+            const pickerContainer = document.getElementById('class-students-picker');
+            const studentSelect = document.getElementById('form-class-student-select');
+            
+            if (!cls || !window.studentDatabase[cls]) {
+                pickerContainer.classList.add('hidden');
+                studentSelect.innerHTML = '<option value="">-- Choose student from list --</option>';
+                return;
+            }
+
+            const students = window.studentDatabase[cls];
+            studentSelect.innerHTML = '<option value="">-- Choose student from list --</option>';
+            students.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.admissionNo;
+                opt.textContent = `${s.name} (Adm: ${s.admissionNo})`;
+                studentSelect.appendChild(opt);
+            });
+
+            document.getElementById('class-student-count').innerText = `${students.length} students`;
+            pickerContainer.classList.remove('hidden');
+        }
+
+        window.onClassStudentSelect = function(selectElement) {
+            const admNo = selectElement.value;
+            if (!admNo) return;
+            const cls = document.getElementById('form-class').value;
+            const students = window.studentDatabase[cls] || [];
+            const student = students.find(s => s.admissionNo === admNo);
+            if (student) {
+                document.getElementById('form-adm').value = student.admissionNo;
+                document.getElementById('form-name').value = student.name;
+                showToast(`Selected ${student.name}`, 'info');
+            }
+        }
+
+        // Admission Number Live Input & Auto-suggestions
+        window.handleAdmInput = function() {
+            const cls = document.getElementById('form-class').value;
+            const val = document.getElementById('form-adm').value.toLowerCase().trim();
+            const container = document.getElementById('adm-suggestions');
+
+            if (!cls || !window.studentDatabase[cls] || !val) {
+                container.classList.add('hidden');
+                container.innerHTML = '';
+                return;
+            }
+
+            const matches = window.studentDatabase[cls].filter(s => s.admissionNo.toLowerCase().includes(val));
+            if (matches.length === 0) {
+                container.classList.add('hidden');
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = '';
+            matches.forEach(m => {
+                const div = document.createElement('div');
+                div.className = "p-2.5 hover:bg-indigo-50 dark:hover:bg-slate-800 cursor-pointer text-xs font-medium border-b border-slate-100 dark:border-slate-800 flex items-center justify-between";
+                div.innerHTML = `<span>${m.name}</span> <span class="font-mono text-slate-500">Adm: ${m.admissionNo}</span>`;
+                div.onclick = () => {
+                    document.getElementById('form-adm').value = m.admissionNo;
+                    document.getElementById('form-name').value = m.name;
+                    container.classList.add('hidden');
+                };
+                container.appendChild(div);
+            });
+            container.classList.remove('hidden');
+        }
+
+        // Student Name Live Input & Auto-suggestions
+        window.handleNameInput = function() {
+            const cls = document.getElementById('form-class').value;
+            const val = document.getElementById('form-name').value.toLowerCase().trim();
+            const container = document.getElementById('name-suggestions');
+
+            if (!cls || !window.studentDatabase[cls] || !val) {
+                container.classList.add('hidden');
+                container.innerHTML = '';
+                return;
+            }
+
+            const matches = window.studentDatabase[cls].filter(s => s.name.toLowerCase().includes(val));
+            if (matches.length === 0) {
+                container.classList.add('hidden');
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = '';
+            matches.forEach(m => {
+                const div = document.createElement('div');
+                div.className = "p-2.5 hover:bg-indigo-50 dark:hover:bg-slate-800 cursor-pointer text-xs font-medium border-b border-slate-100 dark:border-slate-800 flex items-center justify-between";
+                div.innerHTML = `<span>${m.name}</span> <span class="font-mono text-slate-500">Adm: ${m.admissionNo}</span>`;
+                div.onclick = () => {
+                    document.getElementById('form-name').value = m.name;
+                    document.getElementById('form-adm').value = m.admissionNo;
+                    container.classList.add('hidden');
+                };
+                container.appendChild(div);
+            });
+            container.classList.remove('hidden');
+        }
+
+        // Payment Method Change
+        window.onPaymentMethodChange = function() {
+            const method = document.getElementById('form-payment-method').value;
+            const amountContainer = document.getElementById('amount-container');
+            const cashInput = document.getElementById('form-cash');
+            if (method === 'Not Paid') {
+                cashInput.value = '0';
+                amountContainer.classList.add('opacity-50');
+                cashInput.disabled = true;
+            } else {
+                amountContainer.classList.remove('opacity-50');
+                cashInput.disabled = false;
+                if (cashInput.value === '0') cashInput.value = '';
+            }
+        }
+
+        // Form Submit (Add or Edit)
+        window.handleFormSubmit = async function(event) {
+            event.preventDefault();
+            const editId = document.getElementById('edit-record-id').value;
+            const className = document.getElementById('form-class').value;
+            const admissionNo = document.getElementById('form-adm').value.trim();
+            const studentName = document.getElementById('form-name').value.trim().toUpperCase();
+            const paymentMethod = document.getElementById('form-payment-method').value;
+            const cashAmount = paymentMethod === 'Not Paid' ? 0 : parseFloat(document.getElementById('form-cash').value || 0);
+            const recordDate = document.getElementById('form-date').value;
+
+            if(editId) {
+                // Update existing record
+                const idx = window.records.findIndex(r => r.id === editId);
+                if(idx !== -1) {
+                    window.records[idx] = { ...window.records[idx], className, admissionNo, studentName, paymentMethod, cashAmount, recordDate };
+                }
+                showToast(`Updated entry for ${studentName}`, 'success');
+            } else {
+                // Add new record
+                const newRecord = { id: 'REC_' + Date.now(), className, admissionNo, studentName, paymentMethod, cashAmount, recordDate };
+                window.records.unshift(newRecord);
+                if (isCloudSyncActive && db && auth) {
+                    try {
+                        await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'records'), newRecord);
+                    } catch (e) { console.error("Cloud save error:", e); }
+                }
+                showToast(`Saved entry for ${studentName}`, 'success');
+            }
+
+            saveToLocalStorage();
+            resetEntryForm();
+            renderDashboard();
+            switchTab('dashboard');
+        }
+
+        window.resetEntryForm = function() {
+            document.getElementById('edit-record-id').value = '';
+            document.getElementById('form-class').value = '';
+            document.getElementById('form-adm').value = '';
+            document.getElementById('form-name').value = '';
+            document.getElementById('form-cash').value = '';
+            document.getElementById('form-payment-method').value = 'Cash';
+            document.getElementById('form-title').innerHTML = `<i class="fa-solid fa-circle-plus text-indigo-600 mr-2"></i> New Collection Entry`;
+            document.getElementById('form-submit-btn').innerHTML = `<i class="fa-solid fa-check"></i><span>Save Entry</span>`;
+            document.getElementById('class-students-picker').classList.add('hidden');
+            onPaymentMethodChange();
+        }
+
+        window.editRecord = function(id) {
+            const rec = window.records.find(r => r.id === id);
+            if(!rec) return;
+            switchTab('add');
+            document.getElementById('edit-record-id').value = rec.id;
+            document.getElementById('form-class').value = rec.className;
+            onClassChange();
+            document.getElementById('form-adm').value = rec.admissionNo;
+            document.getElementById('form-name').value = rec.studentName;
+            document.getElementById('form-payment-method').value = rec.paymentMethod;
+            onPaymentMethodChange();
+            document.getElementById('form-cash').value = rec.cashAmount;
+            if(rec.recordDate) document.getElementById('form-date').value = rec.recordDate;
+
+            document.getElementById('form-title').innerHTML = `<i class="fa-solid fa-pen-to-square text-indigo-600 mr-2"></i> Edit Collection Entry`;
+            document.getElementById('form-submit-btn').innerHTML = `<i class="fa-solid fa-check"></i><span>Update Entry</span>`;
+        }
+
+        window.deleteRecord = async function(id) {
+            window.records = window.records.filter(r => r.id !== id);
+            saveToLocalStorage();
+            renderDashboard();
+            filterData();
+            showToast('Record deleted', 'info');
+        }
+
+        // Add Student Modal Functions
+        window.openAddStudentModal = () => document.getElementById('add-student-modal').classList.remove('hidden');
+        window.closeAddStudentModal = () => document.getElementById('add-student-modal').classList.add('hidden');
+
+        window.handleAddNewStudent = function(event) {
+            event.preventDefault();
+            const cls = document.getElementById('modal-student-class').value;
+            const admissionNo = document.getElementById('modal-student-adm').value.trim();
+            const name = document.getElementById('modal-student-name').value.trim().toUpperCase();
+
+            if(!window.studentDatabase[cls]) window.studentDatabase[cls] = [];
+            if(window.studentDatabase[cls].some(s => s.admissionNo === admissionNo)) {
+                showToast('Student with admission no already exists in class', 'error');
+                return;
+            }
+
+            window.studentDatabase[cls].push({ admissionNo, name });
+            localStorage.setItem('varisamkhya_students', JSON.stringify(window.studentDatabase));
+            closeAddStudentModal();
+            document.getElementById('add-student-form').reset();
+            renderDirectory();
+            showToast(`Added ${name} to Class ${cls}`, 'success');
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('varisamkhya_records', JSON.stringify(window.records));
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            if (dateStr.includes('-')) {
+                const p = dateStr.split('-');
+                if (p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
+            }
+            return dateStr;
+        }
+
+        // Filter and Render Registry
+        window.filterData = function() {
+            const clsFilter = document.getElementById('filter-class').value;
+            const payFilter = document.getElementById('filter-payment').value;
+            const query = document.getElementById('search-input').value.toLowerCase().trim();
+
+            const filtered = window.records.filter(r => {
+                if (clsFilter && r.className !== clsFilter) return false;
+                if (payFilter && r.paymentMethod !== payFilter) return false;
+                if (query && !r.admissionNo.toLowerCase().includes(query) && !r.studentName.toLowerCase().includes(query)) return false;
+                return true;
+            });
+
+            const container = document.getElementById('registry-cards-container');
+            container.innerHTML = '';
+            document.getElementById('table-record-count').innerText = `${filtered.length} records`;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs">No records found</div>`;
+                return;
+            }
+
+            filtered.forEach(r => {
+                let badgeBg = "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300";
+                if(r.paymentMethod === 'Online') badgeBg = "bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300";
+                if(r.paymentMethod === 'Not Paid') badgeBg = "bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300";
+
+                const card = document.createElement('div');
+                card.className = "glass-panel p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between";
+                card.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">Class ${r.className}</span>
+                            <span class="text-[10px] font-mono text-slate-400">Adm: ${r.admissionNo}</span>
+                        </div>
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-slate-100">${r.studentName}</h4>
+                        <div class="flex items-center space-x-2 text-[10px] text-slate-500">
+                            <span><i class="fa-regular fa-calendar mr-1"></i>${formatDate(r.recordDate)}</span>
+                            <span class="px-2 py-0.5 rounded font-semibold ${badgeBg}">${r.paymentMethod}</span>
+                        </div>
+                    </div>
+                    <div class="text-right space-y-1">
+                        <p class="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">₹${r.cashAmount.toLocaleString('en-IN')}</p>
+                        <div class="flex items-center justify-end space-x-1">
+                            <button onclick="editRecord('${r.id}')" class="text-slate-400 hover:text-indigo-600 p-1" title="Edit"><i class="fa-solid fa-pen text-xs"></i></button>
+                            <button onclick="deleteRecord('${r.id}')" class="text-slate-400 hover:text-rose-600 p-1" title="Delete"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Render Dashboard Stats & Canvas Chart
+        window.renderDashboard = function() {
+            const totalCash = window.records.reduce((sum, r) => sum + r.cashAmount, 0);
+            const totalCashAmt = window.records.filter(r => r.paymentMethod === 'Cash').reduce((sum, r) => sum + r.cashAmount, 0);
+            const totalOnlineAmt = window.records.filter(r => r.paymentMethod === 'Online').reduce((sum, r) => sum + r.cashAmount, 0);
+            const totalNotPaidCount = window.records.filter(r => r.paymentMethod === 'Not Paid').length;
+
+            document.getElementById('stat-total-cash').innerText = `₹${totalCash.toLocaleString('en-IN')}`;
+            document.getElementById('stat-total-entries').innerText = `${window.records.length} Total Entries Recorded`;
+            document.getElementById('stat-cash-amt').innerText = `₹${totalCashAmt.toLocaleString('en-IN')}`;
+            document.getElementById('stat-online-amt').innerText = `₹${totalOnlineAmt.toLocaleString('en-IN')}`;
+            document.getElementById('stat-notpaid-count').innerText = `${totalNotPaidCount} students`;
+
+            // Recent activity
+            const activityList = document.getElementById('recent-activity-list');
+            activityList.innerHTML = '';
+            if (window.records.length === 0) {
+                activityList.innerHTML = `<p class="text-xs text-slate-400 text-center py-3">No recent collections</p>`;
+            } else {
+                window.records.slice(0, 4).forEach(r => {
+                    let badgeBg = "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300";
+                    if(r.paymentMethod === 'Online') badgeBg = "bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300";
+                    if(r.paymentMethod === 'Not Paid') badgeBg = "bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300";
+
+                    const item = document.createElement('div');
+                    item.className = "flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 text-xs";
+                    item.innerHTML = `
+                        <div>
+                            <p class="font-bold text-slate-800 dark:text-slate-200">${r.studentName}</p>
+                            <p class="text-[10px] text-slate-500">Class ${r.className} • <span class="px-1.5 py-0.5 rounded font-semibold ${badgeBg}">${r.paymentMethod}</span></p>
+                        </div>
+                        <span class="font-extrabold text-emerald-600 dark:text-emerald-400">₹${r.cashAmount.toLocaleString('en-IN')}</span>
+                    `;
+                    activityList.appendChild(item);
+                });
+            }
+
+            drawDashboardCanvas();
+        }
+
+        // Canvas Chart Drawing
+        function drawDashboardCanvas() {
+            const canvas = document.getElementById('dashboard-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            ctx.clearRect(0, 0, rect.width, rect.height);
+
+            const classTotals = {};
+            classList.forEach(cls => classTotals[cls] = 0);
+            window.records.forEach(r => {
+                if (classTotals[r.className] !== undefined) {
+                    classTotals[r.className] += r.cashAmount;
+                }
+            });
+
+            const keys = classList.filter(cls => classTotals[cls] > 0);
+            const values = keys.map(cls => classTotals[cls]);
+
+            if (values.length === 0) {
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '11px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('No collection data by class yet', rect.width / 2, rect.height / 2);
+                return;
+            }
+
+            const maxVal = Math.max(...values, 100);
+            const padding = { top: 15, right: 10, bottom: 25, left: 35 };
+            const graphW = rect.width - padding.left - padding.right;
+            const graphH = rect.height - padding.top - padding.bottom;
+            const barW = Math.max(6, graphW / keys.length - 6);
+
+            ctx.strokeStyle = document.documentElement.classList.contains('dark') ? '#334155' : '#e2e8f0';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padding.left, padding.top);
+            ctx.lineTo(padding.left, rect.height - padding.bottom);
+            ctx.lineTo(rect.width - padding.right, rect.height - padding.bottom);
+            ctx.stroke();
+
+            keys.forEach((cls, i) => {
+                const val = values[i];
+                const h = (val / maxVal) * graphH;
+                const x = padding.left + i * (graphW / keys.length) + 4;
+                const y = rect.height - padding.bottom - h;
+
+                ctx.fillStyle = '#6366f1';
+                ctx.fillRect(x, y, barW, h);
+
+                ctx.fillStyle = document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b';
+                ctx.font = '9px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(cls, x + barW / 2, rect.height - padding.bottom + 12);
+            });
+        }
+
+        // Render Student Directory
+        window.renderDirectory = function() {
+            const selectedClass = document.getElementById('directory-class-select').value;
+            const query = document.getElementById('directory-search-input').value.toLowerCase().trim();
+            const listContainer = document.getElementById('directory-students-list');
+            listContainer.innerHTML = '';
+
+            const students = window.studentDatabase[selectedClass] || [];
+            const filtered = students.filter(s => s.name.toLowerCase().includes(query) || s.admissionNo.includes(query));
+
+            if (filtered.length === 0) {
+                listContainer.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs">No students found</div>`;
+                return;
+            }
+
+            filtered.forEach(s => {
+                const rec = window.records.find(r => r.className === selectedClass && r.admissionNo === s.admissionNo);
+                const card = document.createElement('div');
+                card.className = "glass-panel p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between";
+                card.innerHTML = `
+                    <div>
+                        <p class="text-xs font-bold text-slate-800 dark:text-slate-100">${s.name}</p>
+                        <p class="text-[10px] text-slate-500 font-mono">Adm: ${s.admissionNo}</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs font-bold ${rec ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 italic'}">
+                            ${rec ? '₹' + rec.cashAmount.toLocaleString('en-IN') + ' (' + rec.paymentMethod + ')' : 'No Entry'}
+                        </span>
+                        <button onclick="quickAddFromDirectory('${selectedClass}', '${s.admissionNo}', '${s.name.replace(/'/g, "\\'")}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-xl text-[10px] font-semibold">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        window.quickAddFromDirectory = function(cls, adm, name) {
+            switchTab('add');
+            document.getElementById('form-class').value = cls;
+            onClassChange();
+            document.getElementById('form-adm').value = adm;
+            document.getElementById('form-name').value = name;
+            document.getElementById('form-cash').focus();
+        }
+
+        // Export Functions with Summary Stats
+        window.exportGoogleSheet = function() {
+            if (window.records.length === 0) { showToast('No records to export', 'error'); return; }
+            const totalCash = window.records.filter(r => r.paymentMethod === 'Cash').reduce((s, r) => s + r.cashAmount, 0);
+            const totalOnline = window.records.filter(r => r.paymentMethod === 'Online').reduce((s, r) => s + r.cashAmount, 0);
+            const totalNotPaid = window.records.filter(r => r.paymentMethod === 'Not Paid').length;
+
+            const data = window.records.map(r => ({
+                "Class": `Class ${r.className}`, "Admission No": r.admissionNo, "Student Name": r.studentName,
+                "Payment Method": r.paymentMethod, "Amount (₹)": r.cashAmount, "Date": formatDate(r.recordDate)
+            }));
+
+            // Append Summary Row
+            data.push({});
+            data.push({ "Class": "SUMMARY", "Admission No": "", "Student Name": `Total Cash: ₹${totalCash} | Total Online: ₹${totalOnline} | Not Paid Count: ${totalNotPaid}`, "Payment Method": "", "Amount (₹)": window.records.reduce((s, r) => s + r.cashAmount, 0), "Date": "" });
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Varisamkhya");
+            XLSX.writeFile(wb, "Varisamkhya_Report.xlsx");
+            showToast('Excel report downloaded', 'success');
+        }
+
+        window.exportCSV = window.exportGoogleSheet;
+
+        window.exportPDF = function() {
+            if (window.records.length === 0) { showToast('No records to export', 'error'); return; }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(14);
+            doc.text("Varisamkhya Collection Registry", 14, 20);
+            doc.setFontSize(9);
+            
+            const totalCash = window.records.filter(r => r.paymentMethod === 'Cash').reduce((s, r) => s + r.cashAmount, 0);
+            const totalOnline = window.records.filter(r => r.paymentMethod === 'Online').reduce((s, r) => s + r.cashAmount, 0);
+            const totalNotPaid = window.records.filter(r => r.paymentMethod === 'Not Paid').length;
+            const grandTotal = window.records.reduce((s, r) => s + r.cashAmount, 0);
+
+            doc.text(`Generated on: ${new Date().toLocaleDateString()} | Cash: ₹${totalCash} | Online: ₹${totalOnline} | Not Paid: ${totalNotPaid} | Grand Total: ₹${grandTotal}`, 14, 26);
+
+            const cols = ["Class", "Adm No", "Student Name", "Method", "Amount (₹)", "Date"];
+            const rows = window.records.map(r => [`Class ${r.className}`, r.admissionNo, r.studentName, r.paymentMethod, r.cashAmount, formatDate(r.recordDate)]);
+
+            doc.autoTable({ head: [cols], body: rows, startY: 32, theme: 'grid', styles: { fontSize: 8 } });
+            doc.save("Varisamkhya_Report.pdf");
+            showToast('PDF report downloaded', 'success');
+        }
+
+        // Auth Modal
+        window.openAuthModal = () => document.getElementById('auth-modal').classList.remove('hidden');
+        window.closeAuthModal = () => document.getElementById('auth-modal').classList.add('hidden');
+        window.handleGoogleSignIn = () => {
+            const email = document.getElementById('google-email-input').value.trim();
+            if(!email.includes('@')) { showToast('Enter valid email', 'error'); return; }
+            closeAuthModal();
+            document.getElementById('sync-text').innerText = email;
+            showToast(`Connected: ${email}`, 'success');
+        }
+
+        // Toast
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bg = type === 'error' ? 'bg-rose-600' : type === 'info' ? 'bg-indigo-600' : 'bg-emerald-600';
+            toast.className = `pointer-events-auto px-4 py-2.5 rounded-2xl shadow-xl text-white text-xs font-semibold ${bg} transition-all duration-300`;
+            toast.innerText = msg;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+</body>
+</html>
